@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const item = getItemById(parseInt(id));
+  const item = await getItemById(parseInt(id));
   if (!item) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
   }
@@ -20,7 +20,7 @@ export async function PUT(
   const { id } = await params;
   try {
     const body = await request.json();
-    const updated = updateItem(parseInt(id), {
+    const updated = await updateItem(parseInt(id), {
       ...body,
       price: body.price ? parseFloat(body.price) : null,
       featured: body.featured || false,
@@ -30,9 +30,10 @@ export async function PUT(
     }
     return NextResponse.json({ item: updated });
   } catch (error: any) {
-    if (error?.message?.includes("UNIQUE constraint failed")) {
+    if (error?.message?.includes("unique") || error?.code === "23505") {
       return NextResponse.json({ error: "An item with this link already exists" }, { status: 409 });
     }
+    console.error(error);
     return NextResponse.json({ error: "Failed to update item" }, { status: 500 });
   }
 }
@@ -42,7 +43,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const deleted = deleteItem(parseInt(id));
+  const deleted = await deleteItem(parseInt(id));
   if (!deleted) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
   }

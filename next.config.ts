@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
       { protocol: "http", hostname: "**" },
     ],
   },
-  serverExternalPackages: ["better-sqlite3"],
 };
 
 export default nextConfig;

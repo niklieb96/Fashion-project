@@ -7,9 +7,10 @@ export async function GET(request: NextRequest) {
   const query = searchParams.get("q") || "";
 
   try {
-    const items = query ? searchItems(query) : getAllItems(category);
+    const items = query ? await searchItems(query) : await getAllItems(category);
     return NextResponse.json({ items });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });
   }
 }
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const item = createItem({
+    const item = await createItem({
       name,
       brand,
       price: price ? parseFloat(price) : null,
@@ -40,9 +41,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ item }, { status: 201 });
   } catch (error: any) {
-    if (error?.message?.includes("UNIQUE constraint failed")) {
+    if (error?.message?.includes("unique") || error?.code === "23505") {
       return NextResponse.json({ error: "An item with this link already exists" }, { status: 409 });
     }
+    console.error(error);
     return NextResponse.json({ error: "Failed to create item" }, { status: 500 });
   }
 }

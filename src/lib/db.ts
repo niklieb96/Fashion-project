@@ -1,25 +1,18 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { neon } from "@neondatabase/serverless";
 import type { FashionItem, NewFashionItem } from "./types";
 export type { FashionItem, NewFashionItem } from "./types";
 
-const DB_PATH = path.join(process.cwd(), "fashion.db");
-
-let db: Database.Database;
-
-function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(DB_PATH);
-    db.pragma("journal_mode = WAL");
-    initDb(db);
-  }
-  return db;
+function getSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL environment variable is not set");
+  return neon(url);
 }
 
-function initDb(database: Database.Database) {
-  database.exec(`
+async function initDb() {
+  const sql = getSql();
+  await sql`
     CREATE TABLE IF NOT EXISTS fashion_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       brand TEXT NOT NULL,
       price REAL,
@@ -28,82 +21,100 @@ function initDb(database: Database.Database) {
       category TEXT DEFAULT 'Other',
       tags TEXT DEFAULT '',
       description TEXT DEFAULT '',
-      featured INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
+      featured BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
     )
-  `);
+  `;
 }
 
-export function getAllItems(category?: string): FashionItem[] {
-  const database = getDb();
-  if (category && category !== "All") {
-    return database
-      .prepare(
-        "SELECT * FROM fashion_items WHERE category = ? ORDER BY created_at DESC"
-      )
-      .all(category) as FashionItem[];
+let dbInitialized = false;
+
+async function ensureInit() {
+  if (!dbInitialized) {
+    await initDb();
+    dbInitialized = true;
   }
-  return database
-    .prepare("SELECT * FROM fashion_items ORDER BY created_at DESC")
-    .all() as FashionItem[];
 }
 
-export function getItemById(id: number): FashionItem | undefined {
-  const database = getDb();
-  return database
-    .prepare("SELECT * FROM fashion_items WHERE id = ?")
-    .get(id) as FashionItem | undefined;
+export async function getAllItems(category?: string): Promise<FashionItem[]> {
+  await ensureInit();
+  const sql = getSql();
+  if (category && category !== "All") {
+    return sql`
+      SELECT * FROM fashion_items WHERE category = ${category}
+      ORDER BY created_at DESC
+    ` as unknown as Promise<FashionItem[]>;
+  }
+  return sql`
+    SELECT * FROM fashion_items ORDER BY created_at DESC
+  ` as unknown as Promise<FashionItem[]>;
 }
 
-export function createItem(item: NewFashionItem): FashionItem {
-  const database = getDb();
-  const result = database
-    .prepare(
-      `INSERT INTO fashion_items (name, brand, price, image_url, link, category, tags, description, featured)
-       VALUES (@name, @brand, @price, @image_url, @link, @category, @tags, @description, @featured)`
-    )
-    .run({
-      ...item,
-      featured: item.featured ? 1 : 0,
-    });
-  return getItemById(result.lastInsertRowid as number)!;
+export async function getItemById(id: number): Promise<FashionItem | undefined> {
+  await ensureInit();
+  const sql = getSql();
+  const rows = await sql`
+    SELECT * FROM fashion_items WHERE id = ${id}
+  `;
+  return rows[0] as FashionItem | undefined;
 }
 
-export function updateItem(
+export async function createItem(item: NewFashionItem): Promise<FashionItem> {
+  await ensureInit();
+  const sql = getSql();
+  const rows = await sql`
+    INSERT INTO fashion_items (name, brand, price, image_url, link, category, tags, description, featured)
+    VALUES (${item.name}, ${item.brand}, ${item.price}, ${item.image_url}, ${item.link},
+            ${item.category}, ${item.tags}, ${item.description}, ${item.featured})
+    RETURNING *
+  `;
+  return rows[0] as FashionItem;
+}
+
+export async function updateItem(
   id: number,
   item: Partial<NewFashionItem>
-): FashionItem | undefined {
-  const database = getDb();
-  const existing = getItemById(id);
+): Promise<FashionItem | undefined> {
+  await ensureInit();
+  const existing = await getItemById(id);
   if (!existing) return undefined;
 
-  const updated = { ...existing, ...item };
-  database
-    .prepare(
-      `UPDATE fashion_items SET name=@name, brand=@brand, price=@price, image_url=@image_url,
-       link=@link, category=@category, tags=@tags, description=@description, featured=@featured
-       WHERE id=@id`
-    )
-    .run({ ...updated, featured: updated.featured ? 1 : 0, id });
-  return getItemById(id);
+  const u = { ...existing, ...item };
+  const sql = getSql();
+  const rows = await sql`
+    UPDATE fashion_items SET
+      name        = ${u.name},
+      brand       = ${u.brand},
+      price       = ${u.price},
+      image_url   = ${u.image_url},
+      link        = ${u.link},
+      category    = ${u.category},
+      tags        = ${u.tags},
+      description = ${u.description},
+      featured    = ${u.featured}
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return rows[0] as FashionItem | undefined;
 }
 
-export function deleteItem(id: number): boolean {
-  const database = getDb();
-  const result = database
-    .prepare("DELETE FROM fashion_items WHERE id = ?")
-    .run(id);
-  return result.changes > 0;
+export async function deleteItem(id: number): Promise<boolean> {
+  await ensureInit();
+  const sql = getSql();
+  const rows = await sql`
+    DELETE FROM fashion_items WHERE id = ${id} RETURNING id
+  `;
+  return rows.length > 0;
 }
 
-export function searchItems(query: string): FashionItem[] {
-  const database = getDb();
+export async function searchItems(query: string): Promise<FashionItem[]> {
+  await ensureInit();
+  const sql = getSql();
   const q = `%${query}%`;
-  return database
-    .prepare(
-      `SELECT * FROM fashion_items
-       WHERE name LIKE ? OR brand LIKE ? OR description LIKE ? OR tags LIKE ?
-       ORDER BY created_at DESC`
-    )
-    .all(q, q, q, q) as FashionItem[];
+  return sql`
+    SELECT * FROM fashion_items
+    WHERE name ILIKE ${q} OR brand ILIKE ${q}
+       OR description ILIKE ${q} OR tags ILIKE ${q}
+    ORDER BY created_at DESC
+  ` as unknown as Promise<FashionItem[]>;
 }
