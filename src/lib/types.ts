@@ -13,3 +13,13 @@ export type FashionItem = {
 };
 
 export type NewFashionItem = Omit<FashionItem, "id" | "created_at">;
+
+export type Brand = {
+  id: number;
+  name: string;
+  description: string;
+  image_url: string | null;
+  created_at: string;
+};
+
+export type NewBrand = Omit<Brand, "id" | "created_at">;
