@@ -4,25 +4,36 @@ import { Settings } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="border-b border-stone-200 bg-white sticky top-0 z-10">
-        <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#0c0c0e]">
+      <header className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#0c0c0e]/80 backdrop-blur-2xl">
+        <div className="max-w-screen-xl mx-auto px-6 py-5 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-light tracking-[0.2em] uppercase text-stone-900">Fashion Archive</h1>
-            <p className="text-xs text-stone-400 tracking-widest mt-0.5">A curated selection</p>
+            <h1 className="text-sm font-light tracking-[0.3em] uppercase text-white/85">
+              Fashion Archive
+            </h1>
+            <p className="text-[10px] text-white/25 tracking-[0.2em] mt-0.5 uppercase">
+              Curated selection
+            </p>
           </div>
-          <Link href="/admin" className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-stone-700 transition-colors uppercase tracking-widest">
-            <Settings className="w-3.5 h-3.5" />
-            Admin
+          <Link
+            href="/admin"
+            className="flex items-center gap-2 text-[10px] text-white/25 hover:text-white/55 transition-colors uppercase tracking-[0.2em]"
+          >
+            <Settings className="w-3 h-3" />
+            Manage
           </Link>
         </div>
       </header>
+
       <main className="max-w-screen-xl mx-auto px-6 py-10">
         <ShowcaseGrid />
       </main>
-      <footer className="border-t border-stone-200 mt-16">
+
+      <footer className="border-t border-white/[0.05] mt-20">
         <div className="max-w-screen-xl mx-auto px-6 py-6">
-          <p className="text-xs text-stone-300 text-center tracking-widest uppercase">Fashion Archive — A curated collection</p>
+          <p className="text-[10px] text-white/15 text-center tracking-[0.25em] uppercase">
+            Fashion Archive
+          </p>
         </div>
       </footer>
     </div>

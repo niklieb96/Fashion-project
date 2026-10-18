@@ -24,30 +24,59 @@ export default function ShowcaseGrid() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchItems(category, searchQuery); }, [category, searchQuery, fetchItems]);
+  useEffect(() => {
+    fetchItems(category, searchQuery);
+  }, [category, searchQuery, fetchItems]);
 
-  const handleCategoryChange = (cat: string) => { setCategory(cat); setSearchQuery(""); };
-  const handleSearch = (q: string) => { setSearchQuery(q); if (q) setCategory("All"); };
+  const handleCategoryChange = (cat: string) => {
+    setCategory(cat);
+    setSearchQuery("");
+  };
+
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    if (q) setCategory("All");
+  };
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="flex-1"><FilterBar activeCategory={searchQuery ? "All" : category} onCategoryChange={handleCategoryChange} /></div>
-        <div className="w-full sm:w-64"><SearchBar onSearch={handleSearch} /></div>
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-10">
+        <div className="flex-1 min-w-0">
+          <FilterBar
+            activeCategory={searchQuery ? "All" : category}
+            onCategoryChange={handleCategoryChange}
+          />
+        </div>
+        <div className="w-full sm:w-52 flex-shrink-0">
+          <SearchBar onSearch={handleSearch} />
+        </div>
       </div>
-      <p className="text-xs text-stone-400 uppercase tracking-widest mb-6">
-        {loading ? "Loading..." : `${items.length} item${items.length !== 1 ? "s" : ""}`}
+
+      {/* Count */}
+      <p className="text-[10px] text-white/20 uppercase tracking-[0.2em] mb-6">
+        {loading ? "—" : `${items.length} piece${items.length !== 1 ? "s" : ""}`}
       </p>
+
+      {/* Grid */}
       {loading ? (
-        <div className="flex items-center justify-center py-24"><Loader2 className="w-6 h-6 text-stone-300 animate-spin" /></div>
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="w-4 h-4 text-white/20 animate-spin" />
+        </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <p className="text-stone-400 text-sm mb-2">No items found</p>
-          <p className="text-stone-300 text-xs">{searchQuery ? `No results for "${searchQuery}"` : "Add items via the admin panel"}</p>
+        <div className="flex flex-col items-center justify-center py-32 text-center">
+          <p className="text-white/25 text-xs font-light mb-1.5">No items found</p>
+          <p className="text-white/15 text-[10px] tracking-wide">
+            {searchQuery
+              ? `No results for "${searchQuery}"`
+              : "Add items via the admin panel"}
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {items.map(item => <ItemCard key={item.id} item={item} />)}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {items.map((item) => (
+            <ItemCard key={item.id} item={item} />
+          ))}
         </div>
       )}
     </div>
